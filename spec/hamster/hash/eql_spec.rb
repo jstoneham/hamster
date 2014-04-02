@@ -2,23 +2,51 @@ require "spec_helper"
 
 require "hamster/hash"
 
+describe ::Hash do
+
+  [:eql?, :==].each do |method|
+
+    describe "##{method}" do
+
+      describe "returns true when comparing with" do
+
+        before do
+          @hash = Hamster.hash("A" => "aye", "B" => "bee", "C" => "see")
+        end
+
+        it "a Hamster hash" do
+          {"A" => "aye", "B" => "bee", "C" => "see"}.send(method, @hash).should == true
+        end
+
+      end
+
+    end
+
+  end
+
+end
+
 describe Hamster::Hash do
 
   [:eql?, :==].each do |method|
 
     describe "##{method}" do
 
-      describe "returns false when comparing with" do
+      before do
+        @hash = Hamster.hash("A" => "aye", "B" => "bee", "C" => "see")
+      end
 
-        before do
-          @hash = Hamster.hash("A" => "aye", "B" => "bee", "C" => "see")
-        end
+      describe "returns true when comparing with" do
 
         it "a standard hash" do
-          @hash.send(method, "A" => "aye", "B" => "bee", "C" => "see").should == false
+          @hash.send(method, "A" => "aye", "B" => "bee", "C" => "see").should == true
         end
 
-        it "an aribtrary object" do
+      end
+
+      describe "returns false when comparing with" do
+
+        it "an arbitrary object" do
           @hash.send(method, Object.new).should == false
         end
 

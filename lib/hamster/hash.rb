@@ -168,7 +168,8 @@ module Hamster
     end
 
     def eql?(other)
-      instance_of?(other.class) && @trie.eql?(other.instance_variable_get(:@trie))
+      (instance_of?(other.class) && @trie.eql?(other.instance_variable_get(:@trie))) ||
+        (other.instance_of?(::Hash) && marshal_dump.eql?(other))
     end
     def_delegator :self, :eql?, :==
 
@@ -193,6 +194,7 @@ module Hamster
       end
       output
     end
+    def_delegator :self, :marshal_dump, :to_hash
 
     def marshal_load(dictionary)
       @trie = dictionary.reduce EmptyTrie do |trie, key_value|
