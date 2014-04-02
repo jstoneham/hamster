@@ -78,72 +78,112 @@ module Hamster
       transform_unless(trie.equal?(@trie)) { @trie = trie }
     end
 
-    def each
+    def each(&block)
       return self unless block_given?
-      @trie.each { |entry| yield(entry.key, entry.value) }
+      if block.arity > 1
+        @trie.each { |entry| yield(entry.key, entry.value) }
+      else
+        @trie.each { |entry| yield([entry.key, entry.value]) }
+      end
     end
     def_delegator :self, :each, :foreach
 
-    def map
+    def map(&block)
       return self unless block_given?
       return self if empty?
-      transform { @trie = @trie.reduce(EmptyTrie) { |trie, entry| trie.put(*yield(entry.key, entry.value)) } }
+      if block.arity > 1
+        transform { @trie = @trie.reduce(EmptyTrie) { |trie, entry| trie.put(*yield(entry.key, entry.value)) } }
+      else
+        transform { @trie = @trie.reduce(EmptyTrie) { |trie, entry| trie.put(*yield([entry.key, entry.value])) } }
+      end
     end
     def_delegator :self, :map, :collect
 
-    def reduce(memoization)
+    def reduce(memoization, &block)
       return memoization unless block_given?
-      @trie.reduce(memoization) { |memo, entry| yield(memo, entry.key, entry.value) }
+      if block.arity > 2
+        @trie.reduce(memoization) { |memo, entry| yield(memo, entry.key, entry.value) }
+      else
+        @trie.reduce(memoization) { |memo, entry| yield(memo, [entry.key, entry.value]) }
+      end
     end
     def_delegator :self, :reduce, :inject
     def_delegator :self, :reduce, :fold
     def_delegator :self, :reduce, :foldr
 
-    def filter
+    def filter(&block)
       return self unless block_given?
-      trie = @trie.filter { |entry| yield(entry.key, entry.value) }
+      if block.arity > 1
+        trie = @trie.filter { |entry| yield(entry.key, entry.value) }
+      else
+        trie = @trie.filter { |entry| yield([entry.key, entry.value]) }
+      end
       return self.class.empty if trie.empty?
       transform_unless(trie.equal?(@trie)) { @trie = trie }
     end
     def_delegator :self, :filter, :select
     def_delegator :self, :filter, :find_all
 
-    def remove
+    def remove(&block)
       return self unless block_given?
-      filter { |key, value| !yield(key, value) }
+      if block.arity > 1
+        filter { |key, value| !yield(key, value) }
+      else
+        filter { |key, value| !yield([key, value]) }
+      end
     end
     def_delegator :self, :remove, :reject
     def_delegator :self, :remove, :delete_if
 
-    def any?
+    def any?(&block)
       return !empty? unless block_given?
-      each { |key, value| return true if yield(key, value) }
+      if block.arity > 1
+        each { |key, value| return true if yield(key, value) }
+      else
+        each { |key, value| return true if yield([key, value]) }
+      end
       false
     end
     def_delegator :self, :any?, :exist?
     def_delegator :self, :any?, :exists?
 
-    def all?
-      each { |key, value| return false unless yield(key, value) } if block_given?
+    def all?(&block)
+      if block_given?
+        if block.arity > 1
+          each { |key, value| return false unless yield(key, value) } if block_given?
+        else
+          each { |key, value| return false unless yield([key, value]) } if block_given?
+        end
+      end
       true
     end
     def_delegator :self, :all?, :forall?
 
-    def none?
+    def none?(&block)
       return empty? unless block_given?
-      each { |key, value| return false if yield(key, value) }
+      if block.arity > 1
+        each { |key, value| return false if yield(key, value) }
+      else
+        each { |key, value| return false if yield([key, value]) }
+      end
       true
     end
 
-    def find
+    def find(&block)
       return nil unless block_given?
-      each { |key, value| return Tuple.new(key, value) if yield(key, value) }
+      if block.arity > 1
+        each { |key, value| return Tuple.new(key, value) if yield(key, value) }
+      else
+        each { |key, value| return Tuple.new(key, value) if yield([key, value]) }
+      end
       nil
     end
     def_delegator :self, :find, :detect
 
     def merge(other)
-      transform { @trie = other.reduce(@trie, &:put) }
+      # reduce with two-arg block to support ::Hash as well as Hamster::Hash,
+      # as ::Hash always reduces with one arg for the pair
+      transform { @trie = other.reduce(@trie) {|a, (k, v)| a.put(k, v) } }
     end
     def_delegator :self, :merge, :+
 
